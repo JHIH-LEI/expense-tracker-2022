@@ -12,11 +12,21 @@ switch (process.env.NODE_ENV) {
 }
 
 // google init
-
 export const googleAuthClient = new google.auth.OAuth2({
   clientId: process.env.GOOGLE_API_CLIENT_ID,
   clientSecret: process.env.GOOGLE_API_CLIENT_SECRET,
   redirectUri: process.env.GOOGLE_AUTH_API_REDIRECT,
+});
+
+const googleScopes = [
+  "https://www.googleapis.com/auth/userinfo.email",
+  "https://www.googleapis.com/auth/userinfo.profile",
+];
+
+export const googleAuthURL = googleAuthClient.generateAuthUrl({
+  access_type: "offline",
+  prompt: "consent",
+  scope: googleScopes,
 });
 
 export { google };
