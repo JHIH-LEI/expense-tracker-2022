@@ -1,5 +1,7 @@
 import { createPool } from "mysql2";
 import dotenv from "dotenv";
+import { google } from "googleapis";
+
 switch (process.env.NODE_ENV) {
   case "development":
     dotenv.config({ path: "./.env.dev" });
@@ -8,6 +10,17 @@ switch (process.env.NODE_ENV) {
   default:
     dotenv.config({ path: "./.env" });
 }
+
+// google init
+
+export const googleAuthClient = new google.auth.OAuth2({
+  clientId: process.env.GOOGLE_API_CLIENT_ID,
+  clientSecret: process.env.GOOGLE_API_CLIENT_SECRET,
+  redirectUri: process.env.GOOGLE_AUTH_API_REDIRECT,
+});
+
+export { google };
+// data base init
 
 const initMySql = {
   user: process.env.DB_USER,
