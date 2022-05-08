@@ -1,14 +1,19 @@
-import { createPool } from "mysql2";
-import dotenv from "dotenv";
+import { config as dotenvConfig } from "dotenv";
+import { config as firebaseConfig } from "firebase-functions";
 import { google } from "googleapis";
+import { PrismaClient } from "@prisma/client";
+
+export const prisma = new PrismaClient();
+
+export const functionsConfig = firebaseConfig();
 
 switch (process.env.NODE_ENV) {
   case "development":
-    dotenv.config({ path: "./.env.dev" });
+    dotenvConfig({ path: "./.env.development" });
   case "production":
-    dotenv.config({ path: "./.env.prod" });
+    dotenvConfig({ path: "./.env.prod" });
   default:
-    dotenv.config({ path: "./.env" });
+    dotenvConfig({ path: "./.env" });
 }
 
 // google init
@@ -30,20 +35,3 @@ export const googleAuthURL = googleAuthClient.generateAuthUrl({
 });
 
 export { google };
-// data base init
-
-const initMySql = {
-  user: process.env.DB_USER,
-  password: process.env.DB_PASS,
-  database: process.env.DB_NAME,
-  socketPath: `/cloudsql.${process.env.INSTANCE_CONNECTION_NAME}`,
-};
-
-process.env.NODE_ENV === "production" &&
-  (initMySql.socketPath = `/cloudsql.${process.env.INSTANCE_CONNECTION_NAME}`);
-
-export const pool = createPool({
-  user: process.env.DB_USER,
-  password: process.env.DB_PASS,
-  database: process.env.DB_NAME,
-});
