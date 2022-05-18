@@ -4,6 +4,8 @@ import { ErrorCode, ErrorCodeMapToStatus } from "../types/error";
 import { hashSync } from "bcrypt";
 import { DEFAULT_CATEGORY } from "../types/common";
 import { CategoryRecord } from "@prisma/client";
+import jwt from "jsonwebtoken";
+import ms from "ms";
 const router = express.Router();
 
 router.get("/google", async (req: Request, res: Response) => {
@@ -42,9 +44,9 @@ router.get("/google/callback", async (req: Request, res: Response) => {
     );
   }
 
-  const isNewUser = !(await prisma.user.findUnique({ where: { email } }));
+  const userData = await prisma.user.findUnique({ where: { email } });
 
-  if (isNewUser) {
+  if (userData !== null) {
     const randomPassword = (Math.random() + 1).toString(36).substring(2);
 
     const password = hashSync(randomPassword, 10);
@@ -74,10 +76,18 @@ router.get("/google/callback", async (req: Request, res: Response) => {
     });
   }
 
-  // TODO: 存token
+  const token = jwt.sign(
+    {
+      user_id: userData?.id,
+    },
+    process.env.JWT_SECRET!,
+    { expiresIn: ms("7 days") }
+  );
+
+  // TODO: 存access_token
 
   res.status(200).json({
-    token: tokens.access_token,
+    token,
   });
 });
 
