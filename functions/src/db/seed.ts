@@ -4,7 +4,7 @@ import {
   GroupRoster,
   User,
   Category,
-  UserCategory,
+  CategoryRecord,
   CategoryType,
   Record,
 } from "@prisma/client";
@@ -38,19 +38,19 @@ const categoryData: Array<Category> = [
   },
   {
     id: 2,
-    name: "午餐",
+    name: "伙食",
     type: CategoryType.EXPENSE,
     icon: null,
   },
   {
     id: 3,
-    name: "晚餐",
+    name: "娛樂",
     type: CategoryType.EXPENSE,
     icon: null,
   },
   {
     id: 4,
-    name: "早餐",
+    name: "自我學習",
     type: CategoryType.EXPENSE,
     icon: null,
   },
@@ -83,15 +83,17 @@ const groupRosterData: Array<GroupRoster> = [
   },
 ];
 
-const userCategoryData: Array<UserCategory> = [
+const userCategoryData: Array<CategoryRecord> = [
   ...categoryData.map((data) => ({
     id: data.id,
     userId: 1,
+    groupId: null,
     categoryId: data.id,
   })),
   {
     id: categoryData.length + 1,
     userId: 2,
+    groupId: null,
     categoryId: 1,
   },
 ];
@@ -152,7 +154,7 @@ const main = async function () {
       data: groupRosterData,
       skipDuplicates: true,
     }),
-    prisma.userCategory.createMany({
+    prisma.categoryRecord.createMany({
       data: userCategoryData,
       skipDuplicates: true,
     }),
