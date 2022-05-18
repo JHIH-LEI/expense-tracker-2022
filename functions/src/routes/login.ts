@@ -2,6 +2,8 @@ import express, { Response, Request } from "express";
 import { googleAuthClient, google, prisma, googleAuthURL } from "../init";
 import { ErrorCode, ErrorCodeMapToStatus } from "../types/error";
 import { hashSync } from "bcrypt";
+import { DEFAULT_CATEGORY } from "../types/common";
+import { CategoryRecord } from "@prisma/client";
 const router = express.Router();
 
 router.get("/google", async (req: Request, res: Response) => {
@@ -47,6 +49,12 @@ router.get("/google/callback", async (req: Request, res: Response) => {
 
     const password = hashSync(randomPassword, 10);
 
+    const userDefaultCategories = Object.values(DEFAULT_CATEGORY).map((id) => ({
+      categoryId: id,
+      // TODO: 換成真的userId
+      userId: 1,
+    })) as Array<Pick<CategoryRecord, "categoryId" | "userId">>;
+
     await prisma.user.create({
       data: {
         username: google_open_id || email.slice(0, 5),
@@ -54,9 +62,19 @@ router.get("/google/callback", async (req: Request, res: Response) => {
         password,
         icon: null,
         refreshToken: tokens.refresh_token || null,
+        userCategories: {
+          createMany: {
+            data: userDefaultCategories,
+          },
+        },
+      },
+      include: {
+        userCategories: true,
       },
     });
   }
+
+  // TODO: 存token
 
   res.status(200).json({
     token: tokens.access_token,
