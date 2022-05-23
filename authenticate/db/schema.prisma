@@ -1,0 +1,87 @@
+datasource db {
+  provider = "mysql"
+  url = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id Int @id @default(autoincrement())
+  username String @db.VarChar(30)
+  email String @unique @db.VarChar(255)
+  icon String? @db.Text 
+  password String @db.VarChar(255)
+  refreshToken String? @db.Text
+
+  records Record[]
+  groups Group[]
+  groupRosters GroupRoster[]
+  userCategories CategoryRecord[]
+}
+
+model Record  {
+  id Int @id @default(autoincrement())
+  name String @db.VarChar(50)
+  merchant String? @db.VarChar(100)
+  amount Int
+  userId Int 
+  groupId Int?
+  categoryId Int
+
+  user User @relation(fields: [userId],references: [id])
+  category Category @relation(fields: [categoryId],references: [id])
+  group Group? @relation(fields: [groupId],references: [id])
+}
+
+model Group {
+ id Int @id @default(autoincrement())
+ name String @db.VarChar(30)
+ capacity Int @db.UnsignedInt
+ memberCount Int  @db.UnsignedInt
+ adminId Int
+
+ records Record[]
+ user User @relation(fields: [adminId],references: [id])
+ groups GroupRoster[]
+ categoryRecords CategoryRecord[]
+}
+
+model GroupRoster {
+  id Int @id @default(autoincrement())
+  userId Int
+  groupId Int
+
+  user User @relation(fields: [userId],references: [id])
+  group Group @relation(fields: [groupId],references: [id])
+}
+
+model Category {
+  id Int @id @default(autoincrement())
+  name String @db.VarChar(30) @unique
+  icon String? @db.Text
+  type CategoryType
+
+  categoryRecords CategoryRecord[]
+  records Record[]
+}
+
+model CategoryRecord {
+  id Int @id @default(autoincrement())
+  categoryId Int 
+  groupId Int?
+  userId Int?
+
+  category Category @relation(fields: [categoryId],references: [id])
+  user User? @relation(fields: [userId],references: [id])
+  group Group? @relation(fields: [groupId],references: [id])
+
+  @@index([userId],name:"user")
+  @@index([groupId], name:"group")
+}
+
+enum CategoryType {
+  REVENUE
+  EXPENSE
+}
