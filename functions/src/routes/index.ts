@@ -1,6 +1,8 @@
 import { Express } from "express";
-import login from "./login";
+import category from "./category";
+import record from "./record";
 
 export default (app: Express) => {
-  app.use("/login", login);
+  app.use("/categories", category);
+  app.use("/records", record);
 };
