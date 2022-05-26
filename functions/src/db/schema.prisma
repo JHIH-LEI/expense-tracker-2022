@@ -19,6 +19,7 @@ model User {
   groups Group[]
   groupRosters GroupRoster[]
   userCategories CategoryRecord[]
+  groupRequests GroupRequest[]
 }
 
 model Record  {
@@ -49,6 +50,7 @@ model Group {
   user User @relation(fields: [adminId],references: [id])
   groups GroupRoster[]
   categoryRecords CategoryRecord[]
+  groupRequests GroupRequest[]
 }
 
 model GroupRoster {
@@ -85,6 +87,18 @@ model CategoryRecord {
   @@index([categoryId],name:"category")
   @@unique(fields: [id,userId],name:"ownCategory")
   @@unique(fields: [id,groupId],name:"groupCategory")
+}
+
+model GroupRequest {
+  id Int @id @default(autoincrement())
+  groupId Int
+  inviteeId Int
+
+  group Group @relation(fields: [groupId],references: [id])
+  user User @relation(fields: [inviteeId],references: [id])
+  @@unique([groupId,inviteeId])
+  @@index([groupId],name:"group")
+  @@index([inviteeId],name:"user")
 }
 
 enum CategoryType {
