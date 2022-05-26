@@ -82,7 +82,7 @@ export const groupController = {
   },
   joinGroup: async (req: Request, res: Response) => {
     try {
-      const { id: groupId } = req.params;
+      const { group_id: groupId } = req.params;
       const {
         user: { user_id: userId },
       } = req as RequestWithJWT;
@@ -109,23 +109,12 @@ export const groupController = {
       return res.sendStatus(500).json(err);
     }
   },
-  // delete {user_Id}/groups/{group_id}
   leaveGroup: async (req: Request, res: Response) => {
     try {
-      const { user_Id: userId, group_id: groupId } = req.params;
+      const { group_id: groupId } = req.params;
       const {
         user: { user_id: authId },
       } = req as RequestWithJWT;
-
-      if (parseInt(userId) !== authId) {
-        throw new Error(
-          JSON.stringify({
-            status: ErrorCodeMapToStatus.FORBIDDEN,
-            code: ErrorCode.FORBIDDEN,
-            message: `current user : ${authId} can not leave ${userId}'s group: ${groupId}.`,
-          })
-        );
-      }
 
       await prisma.groupRoster.delete({
         where: {
