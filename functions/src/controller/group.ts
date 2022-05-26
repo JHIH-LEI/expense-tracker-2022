@@ -1,4 +1,4 @@
-import { Group, GroupRoster } from "@prisma/client";
+import { Group, GroupRequest, GroupRoster } from "@prisma/client";
 import { prisma } from "../init";
 import { Request, Response } from "express";
 import { ACCOUNT_LEVEL, GROUP_CAPACITY, RequestWithJWT } from "../types/common";
@@ -6,6 +6,8 @@ import { ErrorCode, ErrorCodeMapToStatus } from "../types/error";
 import { parseError } from "../utils/parseError";
 
 type postGroupFromRequest = Pick<Group, "name"> & { members: Array<number> };
+
+// TODO: add socket in group request system
 
 export const groupController = {
   createGroup: async (req: Request, res: Response) => {
@@ -49,18 +51,20 @@ export const groupController = {
         },
       });
 
-      const groupRosters: Array<Omit<GroupRoster, "id">> = members.reduce(
+      // TODO: send request socket
+
+      const groupRequests: Array<Omit<GroupRequest, "id">> = members.reduce(
         (prev: any, memberId: number) => {
-          const groupRoster: Omit<GroupRoster, "id"> = {
+          const groupRequest: Omit<GroupRequest, "id"> = {
             groupId: newGroupId,
-            userId: memberId,
+            inviteeId: memberId,
           };
-          return prev.push(groupRoster);
+          return prev.push(groupRequest);
         },
         []
       );
 
-      await prisma.groupRoster.createMany({ data: groupRosters });
+      await prisma.groupRequest.createMany({ data: groupRequests });
 
       return res.sendStatus(200);
     } catch (err) {
@@ -70,6 +74,35 @@ export const groupController = {
       }
 
       return res.status(customErrorObject.status).json(customErrorObject);
+    }
+  },
+  joinGroup: async (req: Request, res: Response) => {
+    try {
+      const { id: groupId } = req.params;
+      const {
+        user: { user_id: userId },
+      } = req as RequestWithJWT;
+
+      const deleteRequestRecord = prisma.groupRequest.delete({
+        where: {
+          groupId_inviteeId: {
+            groupId: parseInt(groupId),
+            inviteeId: userId,
+          },
+        },
+      });
+
+      const createGroupRoster = prisma.groupRoster.create({
+        data: {
+          groupId: parseInt(groupId),
+          userId,
+        },
+      });
+
+      await prisma.$transaction([deleteRequestRecord, createGroupRoster]);
+      return res.sendStatus(200);
+    } catch (err) {
+      return res.sendStatus(500).json(err);
     }
   },
 };
