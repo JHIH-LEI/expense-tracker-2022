@@ -18,7 +18,7 @@ model User {
   records Record[]
   groups Group[]
   groupRosters GroupRoster[]
-  userCategories UserCategory[]
+  userCategories CategoryRecord[]
 }
 
 model Record  {
@@ -33,18 +33,22 @@ model Record  {
   user User @relation(fields: [userId],references: [id])
   category Category @relation(fields: [categoryId],references: [id])
   group Group? @relation(fields: [groupId],references: [id])
+
+  @@unique(fields: [id,userId],name: "ownRecord")
+  @@unique(fields: [id,userId,groupId],name:"ownRecordInGroup")
 }
 
 model Group {
- id Int @id @default(autoincrement())
- name String @db.VarChar(30)
- capacity Int @db.UnsignedInt
- memberCount Int  @db.UnsignedInt
- adminId Int
+  id Int @id @default(autoincrement())
+  name String @db.VarChar(30)
+  capacity Int @db.UnsignedInt
+  memberCount Int  @db.UnsignedInt
+  adminId Int
 
- records Record[]
- user User @relation(fields: [adminId],references: [id])
- groups GroupRoster[]
+  records Record[]
+  user User @relation(fields: [adminId],references: [id])
+  groups GroupRoster[]
+  categoryRecords CategoryRecord[]
 }
 
 model GroupRoster {
@@ -58,21 +62,29 @@ model GroupRoster {
 
 model Category {
   id Int @id @default(autoincrement())
-  name String @db.VarChar(30)
+  name String @db.VarChar(30) @unique
   icon String? @db.Text
   type CategoryType
 
-  userCategories UserCategory[]
+  categoryRecords CategoryRecord[]
   records Record[]
 }
 
-model UserCategory {
+model CategoryRecord {
   id Int @id @default(autoincrement())
-  categoryId Int
-  userId Int
+  categoryId Int 
+  groupId Int?
+  userId Int?
 
   category Category @relation(fields: [categoryId],references: [id])
-  user User @relation(fields: [userId],references: [id])
+  user User? @relation(fields: [userId],references: [id])
+  group Group? @relation(fields: [groupId],references: [id])
+
+  @@index([userId],name:"user")
+  @@index([groupId], name:"group")
+  @@index([categoryId],name:"category")
+  @@unique(fields: [id,userId],name:"ownCategory")
+  @@unique(fields: [id,groupId],name:"groupCategory")
 }
 
 enum CategoryType {
