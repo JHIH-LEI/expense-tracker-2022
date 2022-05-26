@@ -5,20 +5,32 @@ import isArray from "lodash/isArray";
 import { prisma } from "../init";
 import { RequestWithJWT } from "../types/common";
 import { ErrorCode, ErrorCodeMapToStatus } from "../types/error";
-import { parseError } from "../utils/parseErrorMsg";
+import { parseError } from "../utils/parseError";
 
-type addCategoryFromRequest = {
+type AddCategoryFromRequest = {
   categoriesIDS: Array<number>;
+  groupId: number | null;
+};
+
+type RemoveCategoryFromRequest = {
   groupId: number | null;
 };
 
 export const categoryController = {
   removeCategory: async (req: Request, res: Response) => {
     const { id } = req.params as { id: string };
+    const {
+      user: { user_id: userId },
+    } = req as RequestWithJWT;
+    const { groupId = null } = req.body as RemoveCategoryFromRequest;
+
     try {
-      // TODO: where userId = req.user.user_id, groupId = groupId
+      const condition = groupId
+        ? { id: parseInt(id), groupId }
+        : { id: parseInt(id), userId };
+
       await prisma.categoryRecord.delete({
-        where: { id: parseInt(id) },
+        where: condition,
       });
       return res.status(200).send("delete category success");
     } catch (err) {
@@ -30,7 +42,7 @@ export const categoryController = {
       user: { user_id: userId },
     } = req as RequestWithJWT;
     const { categoriesIDS: newCategoriesIDS, groupId } =
-      req.body as addCategoryFromRequest;
+      req.body as AddCategoryFromRequest;
 
     const validCategories: Array<Omit<CategoryRecord, "id">> =
       newCategoriesIDS.reduce((prev: any, categoryId: number) => {
