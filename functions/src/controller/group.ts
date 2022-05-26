@@ -53,6 +53,10 @@ export const groupController = {
 
       // TODO: send request socket
 
+      if (!members.length) {
+        return res.sendStatus(200);
+      }
+
       const groupRequests: Array<Omit<GroupRequest, "id">> = members.reduce(
         (prev: any, memberId: number) => {
           const groupRequest: Omit<GroupRequest, "id"> = {
@@ -103,6 +107,41 @@ export const groupController = {
       return res.sendStatus(200);
     } catch (err) {
       return res.sendStatus(500).json(err);
+    }
+  },
+  // delete {user_Id}/groups/{group_id}
+  leaveGroup: async (req: Request, res: Response) => {
+    try {
+      const { user_Id: userId, group_id: groupId } = req.params;
+      const {
+        user: { user_id: authId },
+      } = req as RequestWithJWT;
+
+      if (parseInt(userId) !== authId) {
+        throw new Error(
+          JSON.stringify({
+            status: ErrorCodeMapToStatus.FORBIDDEN,
+            code: ErrorCode.FORBIDDEN,
+            message: `current user : ${authId} can not leave ${userId}'s group: ${groupId}.`,
+          })
+        );
+      }
+
+      await prisma.groupRoster.delete({
+        where: {
+          groupId_userId: {
+            groupId: parseInt(groupId),
+            userId: authId,
+          },
+        },
+      });
+      return res.sendStatus(200);
+    } catch (err) {
+      const customErrorObject = parseError(err);
+      if (!customErrorObject) {
+        return res.status(500).json(err);
+      }
+      return res.status(customErrorObject.status).json(customErrorObject);
     }
   },
 };
