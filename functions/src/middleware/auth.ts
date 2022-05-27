@@ -10,19 +10,9 @@ export default async function authenticator(
 ) {
   const authHeader = req.headers["authorization"];
   const token = authHeader && authHeader.split(" ")[1];
-  const { user_id } = req.params;
-  const {
-    user: { user_id: authId },
-  } = req as RequestWithJWT;
 
   if (!token) {
     return res.sendStatus(401);
-  }
-
-  if (user_id && parseInt(user_id) !== authId) {
-    return res
-      .status(403)
-      .end(`user id:${user_id} not equal to login in user id :${authId}.`);
   }
 
   jwt.verify(token, process.env.JWT_ACCESS_TOKEN_SECRET!, (err, user) => {
