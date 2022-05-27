@@ -12,8 +12,27 @@ type RemoveCategoryFromRequest = {
 };
 
 export const categoryController = {
+  getGroupCategories: async (req: Request, res: Response) => {
+    try {
+      const { group_id } = req.params;
+      const categories = await prisma.categoryRecord.findMany({
+        where: {
+          groupId: parseInt(group_id),
+        },
+        select: {
+          groupId: false,
+          userId: false,
+          id: false,
+          category: true,
+        },
+      });
+      return res.status(200).json(categories);
+    } catch (err: any) {
+      return res.status(500).json(err.stack);
+    }
+  },
   removeCategory: async (req: Request, res: Response) => {
-    const { id } = req.params as { id: string };
+    const { category_id } = req.params as { category_id: string };
     const {
       user: { user_id: userId },
     } = req as RequestWithJWT;
@@ -21,8 +40,13 @@ export const categoryController = {
 
     try {
       const condition = groupId
-        ? { groupCategory: { id: parseInt(id), groupId } }
-        : { ownCategory: { id: parseInt(id), userId } };
+        ? {
+            categoryId_groupId: {
+              categoryId: parseInt(category_id),
+              groupId,
+            },
+          }
+        : { categoryId_userId: { categoryId: parseInt(category_id), userId } };
 
       await prisma.categoryRecord.delete({
         where: condition,
@@ -33,24 +57,33 @@ export const categoryController = {
     }
   },
   addCategory: async (req: Request, res: Response) => {
-    const {
-      user: { user_id: userId },
-    } = req as RequestWithJWT;
-    const { categoriesIDS: newCategoriesIDS, groupId } =
-      req.body as AddCategoryFromRequest;
+    try {
+      const {
+        user: { user_id: userId },
+      } = req as RequestWithJWT;
+      const { categoriesIDS: newCategoriesIDS, groupId } =
+        req.body as AddCategoryFromRequest;
 
-    const validCategories = newCategoriesIDS.map((categoryId) =>
-      prisma.categoryRecord.upsert({
-        where: { categoryId },
-        update: {},
-        create: { userId, categoryId, groupId },
-      })
-    );
+      const validCategories = newCategoriesIDS.map((categoryId) =>
+        prisma.categoryRecord.upsert({
+          where: groupId
+            ? {
+                categoryId_groupId: {
+                  groupId,
+                  categoryId,
+                },
+              }
+            : { categoryId_userId: { categoryId, userId } },
+          update: {},
+          create: { userId: groupId ? null : userId, categoryId, groupId },
+        })
+      );
 
-    await prisma
-      .$transaction(validCategories)
-      .catch((err) => res.status(500).json(err));
+      await prisma.$transaction(validCategories);
 
-    return res.status(200).send("add category success");
+      return res.status(200).send("add category success");
+    } catch (err: any) {
+      return res.status(500).json(err.stack);
+    }
   },
 };
