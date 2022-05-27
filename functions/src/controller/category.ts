@@ -1,11 +1,6 @@
-import { Category, CategoryType, CategoryRecord, User } from "@prisma/client";
 import { Request, Response } from "express";
-import filter from "lodash/filter";
-import isArray from "lodash/isArray";
 import { prisma } from "../init";
 import { RequestWithJWT } from "../types/common";
-import { ErrorCode, ErrorCodeMapToStatus } from "../types/error";
-import { parseError } from "../utils/parseError";
 
 type AddCategoryFromRequest = {
   categoriesIDS: Array<number>;
