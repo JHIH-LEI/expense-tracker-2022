@@ -26,15 +26,15 @@ export const categoryController = {
 
     try {
       const condition = groupId
-        ? { id: parseInt(id), groupId }
-        : { id: parseInt(id), userId };
+        ? { groupCategory: { id: parseInt(id), groupId } }
+        : { ownCategory: { id: parseInt(id), userId } };
 
       await prisma.categoryRecord.delete({
         where: condition,
       });
       return res.status(200).send("delete category success");
-    } catch (err) {
-      return res.status(500).json(err);
+    } catch (err: any) {
+      return res.status(500).json(err.stack);
     }
   },
   addCategory: async (req: Request, res: Response) => {
@@ -44,20 +44,17 @@ export const categoryController = {
     const { categoriesIDS: newCategoriesIDS, groupId } =
       req.body as AddCategoryFromRequest;
 
-    const validCategories: Array<Omit<CategoryRecord, "id">> =
-      newCategoriesIDS.reduce((prev: any, categoryId: number) => {
-        const newCategoryRecord: Omit<CategoryRecord, "id"> = {
-          userId,
-          groupId,
-          categoryId,
-        };
-        return prev.push(newCategoryRecord);
-      }, []);
+    const validCategories = newCategoriesIDS.map((categoryId) =>
+      prisma.categoryRecord.upsert({
+        where: { categoryId },
+        update: {},
+        create: { userId, categoryId, groupId },
+      })
+    );
 
-    await prisma.categoryRecord.createMany({
-      data: validCategories,
-      skipDuplicates: true,
-    });
+    await prisma
+      .$transaction(validCategories)
+      .catch((err) => res.status(500).json(err));
 
     return res.status(200).send("add category success");
   },
