@@ -96,17 +96,138 @@ export const groupController = {
         },
       });
 
-      const createGroupRoster = prisma.groupRoster.create({
-        data: {
+      const createGroupRoster = prisma.groupRoster.upsert({
+        where: {
+          groupId_userId: {
+            groupId: parseInt(groupId),
+            userId,
+          },
+        },
+        create: {
           groupId: parseInt(groupId),
           userId,
         },
+        update: {},
       });
 
       await prisma.$transaction([deleteRequestRecord, createGroupRoster]);
       return res.sendStatus(200);
     } catch (err) {
-      return res.sendStatus(500).json(err);
+      const customErrorObject = parseError(err);
+      if (!customErrorObject) {
+        return res.sendStatus(500).json(err);
+      }
+      return res.status(customErrorObject.status).json(err);
+    }
+  },
+  rejectGroupInvite: async (req: Request, res: Response) => {
+    try {
+      const {
+        user: { user_id: userId },
+      } = req as RequestWithJWT;
+      const { group_id: groupId } = req.body;
+
+      // TODO: socket, notify group admin
+      await prisma.groupRequest
+        .delete({
+          where: { groupId_inviteeId: { groupId: groupId, inviteeId: userId } },
+        })
+        .catch((error) => {
+          throw new Error(
+            JSON.stringify({
+              status: ErrorCodeMapToStatus[ErrorCode.MYSQL_DATABASE_ERROR],
+              code: ErrorCode.MYSQL_DATABASE_ERROR,
+              error,
+            })
+          );
+        });
+      return res.sendStatus(200);
+    } catch (err) {
+      const customErrorObject = parseError(err);
+      if (!customErrorObject) {
+        return res.status(500).json(err);
+      }
+      return res.status(customErrorObject.status).json(customErrorObject);
+    }
+  },
+  cancelGroupRequest: async (req: Request, res: Response) => {
+    try {
+      // TODO: socket
+      const { group_id, user_id } = req.params;
+      const {
+        user: { user_id: adminId },
+      } = req as RequestWithJWT;
+
+      const isOwnGroup = await prisma.group
+        .findUnique({
+          where: {
+            adminId_id: {
+              id: parseInt(group_id),
+              adminId,
+            },
+          },
+        })
+        .catch((error) => {
+          throw new Error(
+            JSON.stringify({
+              code: ErrorCode.MYSQL_DATABASE_ERROR,
+              status: ErrorCodeMapToStatus.MYSQL_DATABASE_ERROR,
+              message:
+                "query group base on adminId & id have unexpected error.",
+              error,
+            })
+          );
+        });
+
+      if (isOwnGroup === null) {
+        throw new Error(
+          JSON.stringify({
+            status: ErrorCodeMapToStatus.FORBIDDEN,
+            code: ErrorCode.FORBIDDEN,
+            message:
+              "only group admin can cancel group request. And group must exist.",
+          })
+        );
+      }
+
+      const getGroupRoster = prisma.groupRoster.findUnique({
+        where: {
+          groupId_userId: {
+            groupId: parseInt(group_id),
+            userId: parseInt(user_id),
+          },
+        },
+      });
+
+      const deleteGroupRequest = prisma.groupRequest.delete({
+        where: {
+          groupId_inviteeId: {
+            groupId: parseInt(group_id),
+            inviteeId: parseInt(user_id),
+          },
+        },
+      });
+
+      await prisma
+        .$transaction([getGroupRoster, deleteGroupRequest])
+        .catch((error) => {
+          throw new Error(
+            JSON.stringify({
+              status: ErrorCodeMapToStatus[ErrorCode.MYSQL_DATABASE_ERROR],
+              code: ErrorCode.MYSQL_DATABASE_ERROR,
+              message: "can not reject group request because transaction error",
+              error,
+            })
+          );
+        });
+
+      return res.sendStatus(200);
+    } catch (err) {
+      const customErrorObject = parseError(err);
+      if (!customErrorObject) {
+        return res.status(500).json(err);
+      }
+      return res.status(customErrorObject.status).json(customErrorObject);
     }
   },
   leaveGroup: async (req: Request, res: Response) => {
